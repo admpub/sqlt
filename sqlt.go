@@ -280,77 +280,77 @@ func (db *DB) Master() *sqlx.DB {
 
 // Query queries the database and returns an *sql.Rows.
 func (db *DB) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	r, err := db.sqlxdb[db.slave()].Query(query, args...)
+	r, err := db.Slave().Query(query, args...)
 	return r, err
 }
 
 // QueryRow queries the database and returns an *sqlx.Row.
 func (db *DB) QueryRow(query string, args ...interface{}) *sql.Row {
-	rows := db.sqlxdb[db.slave()].QueryRow(query, args...)
+	rows := db.Slave().QueryRow(query, args...)
 	return rows
 }
 
 // Queryx queries the database and returns an *sqlx.Rows.
 func (db *DB) Queryx(query string, args ...interface{}) (*sqlx.Rows, error) {
-	r, err := db.sqlxdb[db.slave()].Queryx(query, args...)
+	r, err := db.Slave().Queryx(query, args...)
 	return r, err
 }
 
 // QueryRowx queries the database and returns an *sqlx.Row.
 func (db *DB) QueryRowx(query string, args ...interface{}) *sqlx.Row {
-	rows := db.sqlxdb[db.slave()].QueryRowx(query, args...)
+	rows := db.Slave().QueryRowx(query, args...)
 	return rows
 }
 
 // Exec using master db
 func (db *DB) Exec(query string, args ...interface{}) (sql.Result, error) {
-	return db.sqlxdb[0].Exec(query, args...)
+	return db.Master().Exec(query, args...)
 }
 
 // MustExec (panic) runs MustExec using master database.
 func (db *DB) MustExec(query string, args ...interface{}) sql.Result {
-	return db.sqlxdb[0].MustExec(query, args...)
+	return db.Master().MustExec(query, args...)
 }
 
 // Select using slave db.
 func (db *DB) Select(dest interface{}, query string, args ...interface{}) error {
-	return db.sqlxdb[db.slave()].Select(dest, query, args...)
+	return db.Slave().Select(dest, query, args...)
 }
 
 // SelectMaster using master db.
 func (db *DB) SelectMaster(dest interface{}, query string, args ...interface{}) error {
-	return db.sqlxdb[0].Select(dest, query, args...)
+	return db.Master().Select(dest, query, args...)
 }
 
 // Get using slave.
 func (db *DB) Get(dest interface{}, query string, args ...interface{}) error {
-	return db.sqlxdb[db.slave()].Get(dest, query, args...)
+	return db.Slave().Get(dest, query, args...)
 }
 
 // GetMaster using master.
 func (db *DB) GetMaster(dest interface{}, query string, args ...interface{}) error {
-	return db.sqlxdb[0].Get(dest, query, args...)
+	return db.Master().Get(dest, query, args...)
 }
 
 // NamedExec using master db.
 func (db *DB) NamedExec(query string, arg interface{}) (sql.Result, error) {
-	return db.sqlxdb[0].NamedExec(query, arg)
+	return db.Master().NamedExec(query, arg)
 }
 
 // Begin sql transaction
 func (db *DB) Begin() (*sql.Tx, error) {
-	return db.sqlxdb[0].Begin()
+	return db.Master().Begin()
 }
 
 // Beginx sqlx transaction
 func (db *DB) Beginx() (*sqlx.Tx, error) {
-	return db.sqlxdb[0].Beginx()
+	return db.Master().Beginx()
 }
 
 // MustBegin starts a transaction, and panics on error. Returns an *sqlx.Tx instead
 // of an *sql.Tx.
 func (db *DB) MustBegin() *sqlx.Tx {
-	tx, err := db.sqlxdb[0].Beginx()
+	tx, err := db.Master().Beginx()
 	if err != nil {
 		panic(err)
 	}
@@ -359,12 +359,12 @@ func (db *DB) MustBegin() *sqlx.Tx {
 
 // Rebind query
 func (db *DB) Rebind(query string) string {
-	return db.sqlxdb[db.slave()].Rebind(query)
+	return db.Slave().Rebind(query)
 }
 
 // RebindMaster will rebind query for master
 func (db *DB) RebindMaster(query string) string {
-	return db.sqlxdb[0].Rebind(query)
+	return db.Master().Rebind(query)
 }
 
 // Stmt implement sql stmt
@@ -373,29 +373,39 @@ type Stmt struct {
 	stmts []*sql.Stmt
 }
 
+// Master return master stmt
+func (st *Stmt) Master() *sql.Stmt {
+	return st.stmts[0]
+}
+
+// Slave return slave stmt
+func (st *Stmt) Slave() *sql.Stmt {
+	return st.stmts[st.db.slave()]
+}
+
 // Exec will always go to production
 func (st *Stmt) Exec(args ...interface{}) (sql.Result, error) {
-	return st.stmts[0].Exec(args...)
+	return st.Master().Exec(args...)
 }
 
 // Query will always go to slave
 func (st *Stmt) Query(args ...interface{}) (*sql.Rows, error) {
-	return st.stmts[st.db.slave()].Query(args...)
+	return st.Slave().Query(args...)
 }
 
 // QueryMaster will use master db
 func (st *Stmt) QueryMaster(args ...interface{}) (*sql.Rows, error) {
-	return st.stmts[0].Query(args...)
+	return st.Master().Query(args...)
 }
 
 // QueryRow will always go to slave
 func (st *Stmt) QueryRow(args ...interface{}) *sql.Row {
-	return st.stmts[st.db.slave()].QueryRow(args...)
+	return st.Slave().QueryRow(args...)
 }
 
 // QueryRowMaster will use master db
 func (st *Stmt) QueryRowMaster(args ...interface{}) *sql.Row {
-	return st.stmts[0].QueryRow(args...)
+	return st.Master().QueryRow(args...)
 }
 
 // Close stmt
@@ -416,6 +426,16 @@ type Stmtx struct {
 	stmts []*sqlx.Stmt
 }
 
+// Master return master *sqlx.Stmt
+func (st *Stmtx) Master() *sqlx.Stmt {
+	return st.stmts[0]
+}
+
+// Slave return slave *sqlx.Stmt
+func (st *Stmtx) Slave() *sqlx.Stmt {
+	return st.stmts[st.db.slave()]
+}
+
 // Close all dbs connection
 func (st *Stmtx) Close() error {
 	for i := range st.stmts {
@@ -430,68 +450,68 @@ func (st *Stmtx) Close() error {
 
 // Exec will always go to production
 func (st *Stmtx) Exec(args ...interface{}) (sql.Result, error) {
-	return st.stmts[0].Exec(args...)
+	return st.Master().Exec(args...)
 
 }
 
 // Query will always go to slave
 func (st *Stmtx) Query(args ...interface{}) (*sql.Rows, error) {
-	return st.stmts[st.db.slave()].Query(args...)
+	return st.Slave().Query(args...)
 }
 
 // QueryMaster will use master db
 func (st *Stmtx) QueryMaster(args ...interface{}) (*sql.Rows, error) {
-	return st.stmts[0].Query(args...)
+	return st.Master().Query(args...)
 }
 
 // QueryRow will always go to slave
 func (st *Stmtx) QueryRow(args ...interface{}) *sql.Row {
-	return st.stmts[st.db.slave()].QueryRow(args...)
+	return st.Slave().QueryRow(args...)
 }
 
 // QueryRowMaster will use master db
 func (st *Stmtx) QueryRowMaster(args ...interface{}) *sql.Row {
-	return st.stmts[0].QueryRow(args...)
+	return st.Master().QueryRow(args...)
 }
 
 // MustExec using master database
 func (st *Stmtx) MustExec(args ...interface{}) sql.Result {
-	return st.stmts[0].MustExec(args...)
+	return st.Master().MustExec(args...)
 }
 
 // Queryx will always go to slave
 func (st *Stmtx) Queryx(args ...interface{}) (*sqlx.Rows, error) {
-	return st.stmts[st.db.slave()].Queryx(args...)
+	return st.Slave().Queryx(args...)
 }
 
 // QueryRowx will always go to slave
 func (st *Stmtx) QueryRowx(args ...interface{}) *sqlx.Row {
-	return st.stmts[st.db.slave()].QueryRowx(args...)
+	return st.Slave().QueryRowx(args...)
 }
 
 // QueryRowxMaster will always go to master
 func (st *Stmtx) QueryRowxMaster(args ...interface{}) *sqlx.Row {
-	return st.stmts[0].QueryRowx(args...)
+	return st.Master().QueryRowx(args...)
 }
 
 // Get will always go to slave
 func (st *Stmtx) Get(dest interface{}, args ...interface{}) error {
-	return st.stmts[st.db.slave()].Get(dest, args...)
+	return st.Slave().Get(dest, args...)
 }
 
 // GetMaster will always go to master
 func (st *Stmtx) GetMaster(dest interface{}, args ...interface{}) error {
-	return st.stmts[0].Get(dest, args...)
+	return st.Master().Get(dest, args...)
 }
 
 // Select will always go to slave
 func (st *Stmtx) Select(dest interface{}, args ...interface{}) error {
-	return st.stmts[st.db.slave()].Select(dest, args...)
+	return st.Slave().Select(dest, args...)
 }
 
 // SelectMaster will always go to master
 func (st *Stmtx) SelectMaster(dest interface{}, args ...interface{}) error {
-	return st.stmts[0].Select(dest, args...)
+	return st.Master().Select(dest, args...)
 }
 
 // slave
