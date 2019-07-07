@@ -25,6 +25,7 @@ func open(ctx context.Context, driverName, sources string, groupName string) (*D
 	db := &DB{
 		sqlxdb: make([]*sqlx.DB, connsLength),
 		stats:  make([]DbStatus, connsLength),
+		dsn:    make([]string, connsLength),
 	}
 	db.length = connsLength
 	db.driverName = driverName
@@ -53,6 +54,7 @@ func open(ctx context.Context, driverName, sources string, groupName string) (*D
 
 		db.stats[i] = status
 		db.activedb = append(db.activedb, i)
+		db.dsn[i] = conns[i]
 	}
 
 	// set the default group name
