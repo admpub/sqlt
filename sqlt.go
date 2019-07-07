@@ -72,6 +72,11 @@ func OpenWithName(driverName, sources string, name string) (*DB, error) {
 	return openConnection(driverName, sources, name)
 }
 
+// DriverName returns the driverName passed to the Open function for this DB.
+func (db *DB) DriverName() string {
+	return db.driverName
+}
+
 // SetDebug for sqlt
 func (db *DB) SetDebug(v bool) {
 	db.debug = v
