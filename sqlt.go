@@ -77,6 +77,32 @@ func (db *DB) DriverName() string {
 	return db.driverName
 }
 
+// Unsafe returns a version of DB which will silently succeed to scan when
+// columns in the SQL result have no fields in the destination struct.
+// sqlx.Stmt and sqlx.Tx which are created from this DB will inherit its
+// safety behavior.
+func (db *DB) Unsafe() *DB {
+	dbs := make([]*sqlx.DB, len(db.sqlxdb))
+	for i, d := range db.sqlxdb {
+		dbs[i] = d.Unsafe()
+	}
+	return &DB{
+		sqlxdb:     dbs,
+		activedb:   db.activedb,
+		inactivedb: db.inactivedb,
+		dsn:        db.dsn,
+		driverName: db.driverName,
+		groupName:  db.groupName,
+		length:     db.length,
+		count:      db.count,
+		stats:      db.stats,
+		heartBeat:  db.heartBeat,
+		stopBeat:   db.stopBeat,
+		lastBeat:   db.lastBeat,
+		debug:      db.debug,
+	}
+}
+
 // SetDebug for sqlt
 func (db *DB) SetDebug(v bool) {
 	db.debug = v
