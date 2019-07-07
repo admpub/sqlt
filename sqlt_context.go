@@ -11,7 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func openContextConnection(ctx context.Context, driverName, sources string, groupName string) (*DB, error) {
+func open(ctx context.Context, driverName, sources string, groupName string) (*DB, error) {
 	var err error
 
 	conns := strings.Split(sources, ";")
@@ -60,10 +60,16 @@ func openContextConnection(ctx context.Context, driverName, sources string, grou
 	if groupName != "" {
 		db.groupName = groupName
 	}
-
-	// ping database to retrieve error
-	err = db.PingContext(ctx)
 	return db, err
+}
+
+func openContextConnection(ctx context.Context, driverName, sources string, groupName string) (*DB, error) {
+	// ping database to retrieve error
+	db, err := open(ctx, driverName, sources, groupName)
+	if err != nil {
+		return nil, err
+	}
+	return db, db.PingContext(ctx)
 }
 
 // OpenWithContext opening connection with context
@@ -154,16 +160,16 @@ func (db *DB) GetMasterContext(ctx context.Context, dest interface{}, query stri
 }
 
 // PrepareContext return sql stmt
-func (db *DB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
+func (db *DB) PrepareContext(ctx context.Context, query string) (*Stmt, error) {
 	var err error
-	stmt := Stmt{}
+	stmt := new(Stmt)
 	stmts := make([]*sql.Stmt, len(db.sqlxdb))
 
 	for i := range db.sqlxdb {
 		stmts[i], err = db.sqlxdb[i].PrepareContext(ctx, query)
 
 		if err != nil {
-			return stmt, err
+			return nil, err
 		}
 	}
 	stmt.db = db
