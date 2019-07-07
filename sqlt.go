@@ -214,15 +214,15 @@ func (db *DB) Preparex(query string) (*Stmtx, error) {
 	return &Stmtx{db: db, stmts: stmts}, nil
 }
 
-// SetMaxOpenConnections to set max connections
-func (db *DB) SetMaxOpenConnections(max int) {
+// SetMaxOpenConns to set max connections
+func (db *DB) SetMaxOpenConns(max int) {
 	for i := range db.sqlxdb {
 		db.sqlxdb[i].SetMaxOpenConns(max)
 	}
 }
 
-// SetMaxIdleConnections to set max idle connections
-func (db *DB) SetMaxIdleConnections(max int) {
+// SetMaxIdleConns to set max idle connections
+func (db *DB) SetMaxIdleConns(max int) {
 	for i := range db.sqlxdb {
 		db.sqlxdb[i].SetMaxIdleConns(max)
 	}
