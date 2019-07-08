@@ -33,7 +33,8 @@ type DB struct {
 	stopBeat  chan bool
 	lastBeat  string
 	// only use when needed
-	debug bool
+	debug  bool
+	unsafe bool
 }
 
 // DbStatus for status response
@@ -244,11 +245,17 @@ func (db *DB) SetConnMaxLifetime(d time.Duration) {
 
 // Slave return slave database
 func (db *DB) Slave() *sqlx.DB {
+	if db.unsafe {
+		return db.sqlxdb[db.slave()].Unsafe()
+	}
 	return db.sqlxdb[db.slave()]
 }
 
 // Master return master database
 func (db *DB) Master() *sqlx.DB {
+	if db.unsafe {
+		return db.sqlxdb[0].Unsafe()
+	}
 	return db.sqlxdb[0]
 }
 
@@ -402,11 +409,17 @@ type Stmtx struct {
 
 // Master return master *sqlx.Stmt
 func (st *Stmtx) Master() *sqlx.Stmt {
+	if st.db.unsafe {
+		return st.stmts[0].Unsafe()
+	}
 	return st.stmts[0]
 }
 
 // Slave return slave *sqlx.Stmt
 func (st *Stmtx) Slave() *sqlx.Stmt {
+	if st.db.unsafe {
+		return st.stmts[st.db.slave()].Unsafe()
+	}
 	return st.stmts[st.db.slave()]
 }
 
